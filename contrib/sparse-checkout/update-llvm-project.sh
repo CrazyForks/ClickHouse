@@ -22,6 +22,8 @@ echo '/compiler-rt/*' >> $FILES_TO_CHECKOUT
 echo '/libc/*' >> $FILES_TO_CHECKOUT
 echo '!/libc/test/*' >> $FILES_TO_CHECKOUT
 echo '!/compiler-rt/test/*' >> $FILES_TO_CHECKOUT
+echo '/libc/*' >> $FILES_TO_CHECKOUT
+echo '!/libc/test/*' >> $FILES_TO_CHECKOUT
 echo '/cmake/*' >> $FILES_TO_CHECKOUT
 
 git config core.sparsecheckout true
