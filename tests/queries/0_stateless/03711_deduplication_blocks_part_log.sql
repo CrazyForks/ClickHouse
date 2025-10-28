@@ -1,6 +1,10 @@
--- Tags: no-parallel, no-parallel-replicas
+-- Tags: no-parallel, no-parallel-replicas, no-async-insert
 
 -- no-parallel-replicas -- https://github.com/ClickHouse/ClickHouse/issues/90063
+
+-- Tags: deduplication blocks have different values for sync and async inserts,
+-- async insert calculates it as a has of data in the block,
+-- sync insert uses MergeTreePartWriter's hash which covers only data in the partition.
 
 DROP DATABASE IF EXISTS 03710_database;
 CREATE DATABASE 03710_database;
@@ -67,7 +71,6 @@ SELECT r.id as id, r.value as value FROM 03710_database.03711_table as l JOIN 03
 
 SET deduplicate_blocks_in_dependent_materialized_views=1;
 
-SET async_insert=0;
 SET max_block_size=1;
 SET max_insert_block_size=1;
 SET min_insert_block_size_rows=0;

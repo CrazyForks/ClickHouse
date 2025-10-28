@@ -288,6 +288,7 @@ private:
         const InsertDataPtr & data,
         const Block & header,
         const ContextPtr & context_,
+        LoggerPtr logger,
         LogFunc && add_to_async_insert_log);
 
     template <typename E>

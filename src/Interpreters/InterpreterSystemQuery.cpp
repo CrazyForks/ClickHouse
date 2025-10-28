@@ -868,7 +868,6 @@ BlockIO InterpreterSystemQuery::execute()
             if (!queue)
                 throw Exception(ErrorCodes::BAD_ARGUMENTS,
                     "Cannot flush asynchronous insert queue because it is not initialized");
-
             queue->flush(query.tables);
             break;
         }
