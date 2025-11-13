@@ -2325,7 +2325,11 @@ bool ReadFromMergeTree::requestReadingInOrder(size_t prefix_size, int direction,
 
     updateSortDescription();
 
-    analyzed_result_ptr.reset();
+    /// Re-calculate analysis result to have correct read_type
+    /// For some reason for projection it breaks aggregation in order, so skip it
+    if (analyzed_result_ptr && !analyzed_result_ptr->readFromProjection())
+        selectRangesToRead();
+
     return true;
 }
 
