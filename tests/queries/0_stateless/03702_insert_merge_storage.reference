@@ -1,0 +1,35 @@
+1	test_1
+2	test_2
+--- INSERT explicit
+1	test_1
+3	test_3
+--- INSERT explicit fully qualified
+2	test_2
+4	test_4
+--- INSERT auto
+2	test_2
+4	test_4
+5	test_5
+--- INSERT auto in the latest name
+6	test_6
+--- INSERT triggers Materialized view on inner table
+49	test_7
+--- INSERT triggers Materialized view on merge table
+64	test_8
+--- INSERT in chain of Merge tables
+6	test_6
+7	test_7
+8	test_8
+9	test_9
+--- INSERT in Merge with materialized view
+6	test_6
+7	test_7
+8	test_8
+9	test_9
+100	test_100
+--- Merge table defaults used
+1	1
+--- Inner table defaults are used
+1	2
+--- All constraints passed
+6
