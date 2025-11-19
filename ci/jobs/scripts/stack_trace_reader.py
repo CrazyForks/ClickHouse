@@ -33,7 +33,8 @@ class StackTraceReader(object):
                 if "ClickHouse/" in extracted:
                     extracted = extracted.split("ClickHouse/")[1]
                 lines.append(extracted)
-
+            else:
+                lines.append(line)
         # Reverse to get original order
         lines.reverse()
         lines = [line.strip().replace("\n", "") for line in lines]

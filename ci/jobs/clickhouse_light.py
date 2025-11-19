@@ -121,10 +121,6 @@ class ClickHouseSetup:
                 start_new_session=True,
             )
 
-        def cleanup():
-            Shell.check(f"pkill -f clickhouse", verbose=True, strict=False)
-
-        atexit.register(cleanup)
         time.sleep(2)
         return self
 
@@ -196,11 +192,11 @@ class ClickHouseSetup:
             raise Exception(f"Test file {test_file} does not exist")
 
         with open(test_file, "r") as f:
-            queries = f.read().split(";")
+            queries = f.readlines()
 
         if expected_results_file.exists():
             with open(expected_results_file, "r") as f:
-                expected_results = f.readlines()
+                expected_results = [line.rstrip('\n') for line in f.readlines()]
         else:
             expected_results = []
 
@@ -267,11 +263,14 @@ if __name__ == "__main__":
     Shell.check(f"rm -rf /home/max/work/ClickHouse/ci/tmp/wd/")
     Shell.check(f"chmod +x {args.path}")
     Shell.check(f"{args.path} --version", strict=True)
+    def cleanup():
+        Shell.check(f"pkill -f 'clickhouse server'", verbose=True, strict=False)
 
+    atexit.register(cleanup)
     CH = ClickHouseSetup(args.workdir, args.path)
 
     results = []
-    tests = os.listdir("./ci/jobs/queries")
+    tests = [f for f in os.listdir("./ci/jobs/queries") if f.endswith(".sql")]
     if args.test:
         tests = [
             test for test in tests if any(pattern in test for pattern in args.test)
