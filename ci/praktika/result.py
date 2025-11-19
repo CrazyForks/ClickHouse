@@ -184,6 +184,9 @@ class Result(MetaClasses.Serializable):
             Result.StatusExtended.SKIPPED,
         )
 
+    def is_success(self):
+        return self.status in (Result.Status.SUCCESS, Result.StatusExtended.OK)
+
     def is_failure(self):
         return self.status in (Result.Status.FAILED, Result.StatusExtended.FAIL)
 
@@ -311,6 +314,9 @@ class Result(MetaClasses.Serializable):
             self.ext["labels"] = []
         self.ext["labels"].append(label)
 
+    def set_comment(self, comment):
+        self.ext["comment"] = comment
+
     def set_clickable_label(self, label, link):
         if not self.ext.get("hlabels", None):
             self.ext["hlabels"] = []
@@ -318,6 +324,14 @@ class Result(MetaClasses.Serializable):
 
     def set_required_label(self):
         self.set_label(self.Label.REQUIRED)
+
+    def get_hlabel_link(self, label):
+        if not self.ext.get("hlabels", None):
+            return None
+        for hlabel in self.ext["hlabels"]:
+            if hlabel[0] == label:
+                return hlabel[1]
+        return None
 
     @classmethod
     def from_pytest_run(
@@ -671,20 +685,23 @@ class Result(MetaClasses.Serializable):
         else:
             sys.exit(0)
 
-    def to_stdout_formatted(self, indent="", output=""):
+    def to_stdout_formatted(
+        self, indent="", output="", max_info_lines_cnt=100, truncate_from_top=True
+    ):
         """
         Format the result and its sub-results as a human-readable string for stdout output.
 
         Args:
             indent: Current indentation level (used for nested results)
             output: Accumulated output string (used for recursive calls)
+            max_info_lines_cnt: Maximum number of info lines to display
+            truncate_from_top: If True, truncate from top; if False, truncate from bottom
 
         Returns:
             Formatted string representation of the result
         """
         add_frame = not output
         sub_indent = indent + "  "
-        MAX_INFO_LINES_CNT = 100
 
         if add_frame:
             output = indent + "+" * 80 + "\n"
@@ -693,12 +710,17 @@ class Result(MetaClasses.Serializable):
             output += f"{indent}{self.status} [{self.name}]\n"
             info_lines = self.info.splitlines()
 
-            # Truncate info lines if too many, showing only the last N lines
-            if len(info_lines) > MAX_INFO_LINES_CNT:
-                truncated_count = len(info_lines) - MAX_INFO_LINES_CNT
-                info_lines = [
-                    f"~~~~~ truncated {truncated_count} lines ~~~~~"
-                ] + info_lines[-MAX_INFO_LINES_CNT:]
+            # Truncate info lines if too many
+            if len(info_lines) > max_info_lines_cnt:
+                truncated_count = len(info_lines) - max_info_lines_cnt
+                if truncate_from_top:
+                    info_lines = [
+                        f"~~~~~ truncated {truncated_count} lines ~~~~~"
+                    ] + info_lines[-max_info_lines_cnt:]
+                else:
+                    info_lines = info_lines[:max_info_lines_cnt] + [
+                        f"~~~~~ truncated {truncated_count} lines ~~~~~"
+                    ]
 
             for line in info_lines:
                 output += f"{sub_indent}| {line}\n"
@@ -706,7 +728,12 @@ class Result(MetaClasses.Serializable):
         # Recursively format sub-results if this result is not ok
         if not self.is_ok():
             for sub_result in self.results:
-                output = sub_result.to_stdout_formatted(sub_indent, output)
+                output = sub_result.to_stdout_formatted(
+                    indent=sub_indent,
+                    output=output,
+                    max_info_lines_cnt=max_info_lines_cnt,
+                    truncate_from_top=truncate_from_top,
+                )
 
         if add_frame:
             output += indent + "+" * 80 + "\n"

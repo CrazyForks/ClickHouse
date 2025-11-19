@@ -65,13 +65,13 @@ class GH:
         return res
 
     @classmethod
-    def do_command_with_retries(cls, command):
+    def do_command_with_retries(cls, command, verbose=False):
         res = False
         retry_count = 0
         out, err = "", ""
 
         while retry_count < Settings.MAX_RETRIES_GH and not res:
-            ret_code, out, err = Shell.get_res_stdout_stderr(command, verbose=True)
+            ret_code, out, err = Shell.get_res_stdout_stderr(command, verbose=verbose)
             res = ret_code == 0
             if not res and "Validation Failed" in err:
                 print(f"ERROR: GH command validation error {[err]}")
@@ -132,6 +132,7 @@ class GH:
         pr=None,
         repo=None,
         only_update=False,
+        verbose=True,
     ):
         if not repo:
             repo = _Environment.get().REPOSITORY
@@ -143,7 +144,7 @@ class GH:
         cmd_check_created = f'gh api -H "Accept: application/vnd.github.v3+json" \
             "/repos/{repo}/issues/{pr}/comments" \
             --jq \'[.[] | {{id: .id, body: .body}}]\' --paginate'
-        output = Shell.get_output(cmd_check_created, verbose=True)
+        output = Shell.get_output(cmd_check_created, verbose=verbose)
 
         comments = json.loads(output)
 
@@ -157,7 +158,8 @@ class GH:
                     if start_tag in comment["body"] and end_tag in comment["body"]:
                         comment_to_update = comment
                         id_to_update = comment["id"]
-                        print(f"Found comment to update [{id_to_update}]")
+                        if verbose:
+                            print(f"Found comment to update [{id_to_update}]")
                         break
             else:
                 if (
@@ -180,15 +182,17 @@ class GH:
                         f"{re.escape(start_tag)}.*{re.escape(end_tag)}", re.DOTALL
                     )
                     body, _ = rex.subn(f"{start_tag}\n{tag_body}\n{end_tag}", body)
-                    print(
-                        f"Updated existing comment [{id_to_update}] tag [{tag}] with [{tag_body}], new [{body}]"
-                    )
+                    if verbose:
+                        print(
+                            f"Updated existing comment [{id_to_update}] tag [{tag}] with [{tag_body}], new [{body}]"
+                        )
                 else:
                     body = body.removesuffix("\n") + "\n"
                     body += f"{start_tag}\n{tag_body}\n{end_tag}\n"
-                    print(
-                        f"Appended existing comment [{id_to_update}] tag [{tag}] with [{tag_body}], new [{body}]"
-                    )
+                    if verbose:
+                        print(
+                            f"Appended existing comment [{id_to_update}] tag [{tag}] with [{tag_body}], new [{body}]"
+                        )
 
         # Create temp file for body to avoid shell escaping issues
         with tempfile.NamedTemporaryFile(
@@ -203,7 +207,8 @@ class GH:
                     -H "Accept: application/vnd.github.v3+json" \
                     "/repos/{repo}/issues/comments/{id_to_update}" \
                     -F body=@{temp_file_path}'
-            print(f"Update existing comments [{id_to_update}]")
+            if verbose:
+                print(f"Update existing comments [{id_to_update}]")
             res = cls.do_command_with_retries(cmd)
         else:
             if not only_update:
@@ -324,7 +329,7 @@ class GH:
         return cls.do_command_with_retries(cmd)
 
     @classmethod
-    def post_commit_status(cls, name, status, description, url):
+    def post_commit_status(cls, name, status, description, url, sha="", repo=""):
         """
         Sets GH commit status
         :param name: commit status name
@@ -339,10 +344,10 @@ class GH:
             "'", "'\"'\"'"
         )  # escape single quote
         status = cls.convert_to_gh_status(status)
-        repo = _Environment.get().REPOSITORY
+        repo = repo or _Environment.get().REPOSITORY
         command = (
             f"gh api -X POST -H 'Accept: application/vnd.github.v3+json' "
-            f"/repos/{repo}/statuses/{_Environment.get().SHA} "
+            f"/repos/{repo}/statuses/{sha or _Environment.get().SHA} "
             f"-f state='{status}' -f target_url='{url}' "
             f"-f description='{description}' -f context='{name}'"
         )
@@ -440,7 +445,7 @@ class GH:
         comment: str = ""
 
         @classmethod
-        def from_result(cls, result: Result):
+        def from_result(cls, result: Result, sha=""):
             MAX_TEST_CASES_PER_JOB = 10
             MAX_JOBS_PER_SUMMARY = 10
 
@@ -468,16 +473,15 @@ class GH:
                 except Exception:
                     return ""
 
-            info = Info()
             summary = cls(
                 name=result.name,
                 status=result.status,
-                sha=info.sha,
+                sha=sha or Info().sha,
                 start_time=result.start_time,
                 duration=result.duration,
                 failed_results=[],
                 info=extract_hlabels_info(result),
-                comment="",
+                comment=result.ext.get("comment", ""),
             )
 
             # Filter and sort failed/error subresults by priority
@@ -500,14 +504,14 @@ class GH:
                     name=sub_result.name,
                     status=sub_result.status,
                     info=extract_hlabels_info(sub_result),
-                    comment="",
+                    comment=sub_result.ext.get("comment", ""),
                 )
                 failed_result.failed_results = [
                     cls(
                         name=r.name,
                         status=r.status,
                         info=extract_hlabels_info(r),
-                        comment="",
+                        comment=r.ext.get("comment", ""),
                     )
                     for r in flatten_results(sub_result.results)
                     if r.is_completed() and not r.is_ok()
@@ -528,7 +532,7 @@ class GH:
                 print(f"NOTE: {remaining} more jobs not shown in PR comment")
             return summary
 
-        def to_markdown(self):
+        def to_markdown(self, pr_number=0, sha="", workflow_name="", branch=""):
             if self.status == Result.Status.SUCCESS:
                 symbol = "✅"  # Green check mark
             elif self.status == Result.Status.FAILED:
@@ -546,14 +550,19 @@ class GH:
                     self.failed_results = self.failed_results[:15]
                 body += "|job_name|test_name|status|info|comment|\n"
                 body += "|:--|:--|:-:|:--|:--|\n"
-                info = Info()
+                if not ((pr_number or branch) and sha and workflow_name):
+                    info = Info()
+                    pr_number = info.pr_number
+                    sha = info.sha
+                    workflow_name = info.workflow_name
+                    branch = info.git_branch
                 for failed_result in self.failed_results:
-                    job_report_url = info.get_specific_report_url(
-                        info.pr_number,
-                        info.git_branch,
-                        info.sha,
+                    job_report_url = Info.get_specific_report_url_static(
+                        pr_number,
+                        branch,
+                        sha,
                         failed_result.name,
-                        info.workflow_name,
+                        workflow_name,
                     )
                     body += "|[{}]({})|{}|{}|{}|{}|\n".format(
                         failed_result.name,
