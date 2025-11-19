@@ -19,10 +19,10 @@ apply_patches_on_merge	1
 assign_part_uuids	0
 async_block_ids_cache_update_wait_ms	100
 async_insert	0
-auto_statistics_types	
+auto_statistics_types
 background_task_preferred_step_execution_time_ms	50
 cache_populated_by_fetch	0
-cache_populated_by_fetch_filename_regexp	
+cache_populated_by_fetch_filename_regexp
 check_delay_period	60
 check_sample_column_is_correct	1
 clean_deleted_rows	Never
@@ -31,7 +31,7 @@ cleanup_delay_period_random_add	10
 cleanup_thread_preferred_points_per_iteration	150
 cleanup_threads	128
 columns_and_secondary_indices_sizes_lazy_calculation	1
-columns_to_prewarm_mark_cache	
+columns_to_prewarm_mark_cache
 compact_parts_max_bytes_to_buffer	134217728
 compact_parts_max_granules_to_buffer	128
 compact_parts_merge_max_bytes_to_prefetch_part	16777216
@@ -40,13 +40,13 @@ compress_marks	1
 compress_primary_key	1
 concurrent_part_removal_threshold	100
 deduplicate_merge_projection_mode	throw
-default_compression_codec	
+default_compression_codec
 detach_not_byte_identical_parts	0
 detach_old_local_parts_when_cloning_replica	1
 disable_detach_partition_for_zero_copy_replication	1
 disable_fetch_partition_for_zero_copy_replication	1
 disable_freeze_partition_for_zero_copy_replication	1
-disk	
+disk
 dynamic_serialization_version	v2
 enable_block_number_column	0
 enable_block_offset_column	0
@@ -57,8 +57,9 @@ enable_replacing_merge_with_cleanup_for_min_age_to_force_merge	0
 enable_the_endpoint_id_with_zookeeper_name_prefix	0
 enable_vertical_merge_algorithm	1
 enforce_index_structure_match_on_partition_manipulation	0
+escape_variant_subcolumn_filenames	1
 exclude_deleted_rows_for_part_size_in_merge	0
-exclude_materialize_skip_indexes_on_merge	
+exclude_materialize_skip_indexes_on_merge
 execute_merges_on_single_replica_time_threshold	0
 fault_probability_after_part_commit	0
 fault_probability_before_part_commit	0
@@ -99,8 +100,8 @@ max_merge_delayed_streams_for_parallel_write	40
 max_merge_selecting_sleep_ms	60000
 max_number_of_merges_with_ttl_in_pool	2
 max_number_of_mutations_for_replica	0
-max_part_loading_threads	\'auto(12)\'
-max_part_removal_threads	\'auto(12)\'
+max_part_loading_threads	\'auto(48)\'
+max_part_removal_threads	\'auto(48)\'
 max_partitions_to_read	-1
 max_parts_in_total	100000
 max_parts_to_merge_at_once	100
@@ -136,7 +137,7 @@ merge_tree_clear_old_temporary_directories_interval_seconds	60
 merge_tree_enable_clear_old_broken_detached	0
 merge_with_recompression_ttl_timeout	14400
 merge_with_ttl_timeout	14400
-merge_workload	
+merge_workload
 min_absolute_delay_to_close	0
 min_age_to_force_merge_on_partition_only	0
 min_age_to_force_merge_seconds	0
@@ -166,7 +167,7 @@ min_rows_for_compact_part	0
 min_rows_for_full_part_storage	0
 min_rows_for_wide_part	0
 min_rows_to_fsync_after_merge	0
-mutation_workload	
+mutation_workload
 non_replicated_deduplication_window	0
 notify_newest_block_number	0
 number_of_free_entries_in_pool_to_execute_mutation	20
@@ -221,9 +222,9 @@ replicated_max_parallel_sends	0
 replicated_max_parallel_sends_for_table	0
 replicated_max_ratio_of_wrong_parts	0.5
 search_orphaned_parts_disks	any
-serialization_info_version	basic
+serialization_info_version	with_types
 shared_merge_tree_activate_coordinated_merges_tasks	0
-shared_merge_tree_create_per_replica_metadata_nodes	1
+shared_merge_tree_create_per_replica_metadata_nodes	0
 shared_merge_tree_disable_merges_and_mutations_assignment	0
 shared_merge_tree_empty_partition_lifetime	86400
 shared_merge_tree_enable_automatic_empty_partitions_cleanup	0
@@ -271,7 +272,7 @@ simultaneous_parts_removal_limit	0
 sleep_before_commit_local_part_in_replicated_table_ms	0
 sleep_before_loading_outdated_parts_ms	0
 storage_policy	default
-string_serialization_version	single_stream
+string_serialization_version	with_size_stream
 table_disk	0
 temporary_directories_lifetime	86400
 try_fetch_recompressed_part_timeout	7200
