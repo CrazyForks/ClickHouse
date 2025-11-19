@@ -5,14 +5,17 @@ from pathlib import Path
 class StackTraceReader(object):
 
     @staticmethod
-    def get_stack_trace(file_path, max_lines=1000):
-        assert Path(file_path).is_file(), f"File {file_path} does not exist"
-
+    def get_stack_trace(file_path=None, stderr=None, max_lines=1000):
         lines = []
         stack_trace_pattern = re.compile(r"<Fatal> BaseDaemon: \d{1,2}\. ")
-
-        with open(file_path, "r", errors="replace") as file:
-            all_lines = file.readlines()
+        if file_path:
+            assert Path(file_path).is_file(), f"File {file_path} does not exist"
+            with open(file_path, "r", errors="replace") as file:
+                all_lines = file.readlines()
+        elif stderr:
+            all_lines = stderr.split("\n")
+        else:
+            raise Exception("Either file_path or stderr must be provided")
 
         # Only process last max_lines lines
         last_lines = all_lines[-max_lines:] if len(all_lines) > max_lines else all_lines
@@ -28,15 +31,38 @@ class StackTraceReader(object):
                 extracted = line[match.end() :]
                 # Remove everything before and including 'ClickHouse/' if present
                 if "ClickHouse/" in extracted:
-                    clickhouse_idx = extracted.find("ClickHouse/")
-                    extracted = extracted[clickhouse_idx + len("ClickHouse/") :]
-                    clickhouse_idx = extracted.find("ClickHouse/")
-                    extracted = extracted[clickhouse_idx + len("ClickHouse/") :]
+                    extracted = extracted.split("ClickHouse/")[1]
                 lines.append(extracted)
 
         # Reverse to get original order
         lines.reverse()
-        return "".join(lines) if lines else None
+        lines = [line.strip().replace("\n", "") for line in lines]
+        return "\n".join(lines) if lines else None
+
+    @staticmethod
+    def get_fatal_error(stderr=None):
+        if not stderr:
+            return ""
+
+        lines = stderr.split("\n")
+        result = []
+        in_error = False
+
+        for line in lines:
+            if "Logical error:" in line:
+                in_error = True
+                # Extract the part starting from "Logical error:"
+                error_start = line.find("Logical error:")
+                result.append(line[error_start:])
+            elif in_error:
+                # Stop if we hit a line starting with '['
+                if line.strip().startswith("["):
+                    break
+                # Continue collecting lines that are part of the error
+                if line.strip():
+                    result.append(line)
+
+        return "\n".join(result) if result else ""
 
     @staticmethod
     def get_fuzzer_query(fuzzer_log, max_lines=200):
